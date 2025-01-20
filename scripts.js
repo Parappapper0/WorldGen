@@ -4,7 +4,7 @@ const body = document.getElementsByTagName("body")[0]
 const table = document.createElement("table")
 const size_x = 150
 const size_y = 150
-const square_length = 5
+const square_length = 15
 const generation_smoothening = 20
 const generation_type_smoothening = 10
 const smoothening_weight = 0.15
@@ -12,6 +12,9 @@ const type_smoothening_treshold = 0.8
 const type_smoothening_treshold_decay = 0.03
 const type_smoothening_fail_chance = 0.2
 const decoration_iterations = 5
+const generation_type = "grid"
+const grid_steps = 10
+const grid_value_decay = 0.25
 let tiles = []
 let entities = []
 let decorations = []
@@ -166,25 +169,93 @@ async function FillTiles() {
         for (let x = 0; x < size_x; x++)
             tiles.push({
                 "type": "",
-                "height": 1
+                "height": 0.5
             })
 
-    let past_height = 0.5
-    for (let y = 0; y < size_y; y++) {
-        for (let x = 0; x < size_x; x++) {
-  
-            let height = Math.random()
+    switch (generation_type) {
+        case "lines":
+        default:
+            let past_height = 0.5
+            for (let y = 0; y < size_y; y++) {
+                for (let x = 0; x < size_x; x++) {
+          
+                    let height = Math.random()
+        
+                    while (Math.abs(height - past_height) > 0.40)
+                        height = Math.random()
+        
+                    past_height = height
+                    tiles[y * size_x + x].height = height
+                }
+                past_height = 0.5
+            }
+            AssignTypeToTiles()
+            ShowTiles()
+            break;
 
-            while (Math.abs(height - past_height) > 0.40)
-                height = Math.random()
+        case "grid":
+            await GenerateGridSquare(0, size_x, 0, size_y, 1/(1 - grid_value_decay), true, 0)
+            break;
+    }
+    //await SmoothenTiles()
+}
 
-            past_height = height
-            tiles[y * size_x + x].height = height
+let hidden_expected_calls = 1
+let expected_calls = 1
+let calls = 0
+
+async function IDKYET() {
+//spostare variabili quando fatto
+//mettere qui chiamata a sottostanti quando tutte hanno fatto
+//cambiare nome
+
+    await Until(() => hidden_expected_calls == expected_calls)
+
+    calls++
+
+    if (calls != expected_calls) return;
+
+    hidden_expected_calls *= 4
+
+    await new Promise(r => setTimeout(r, 50));
+
+    calls = 0
+    expected_calls *= 4
+
+    AssignTypeToTiles()
+    ShowTiles()
+
+    await new Promise(r => setTimeout(r, 75));
+}
+
+async function GenerateGridSquare(x1, x2, y1, y2, weight, first, step) {
+
+    if (!first) {
+
+        let height = Math.random()
+
+        for (let y = y1; y < y2; y++) {
+            for (let x = x1; x < x2; x++) {
+
+                tiles[y * size_x + x].height += height * weight
+                tiles[y * size_x + x].height /= 1 + weight
+
+            }
         }
-        past_height = 0.5
     }
 
-    await SmoothenTiles()
+    IDKYET()
+    await Until(() => calls == expected_calls)
+
+    if (step <= grid_steps) {
+
+        delta_x = x2 - x1
+        delta_y = y2 - y1
+        GenerateGridSquare(x1, parseInt(x1+delta_x/2), y1, parseInt(y1+delta_y/2), weight * (1 - grid_value_decay), false, step+1)
+        GenerateGridSquare(x1, parseInt(x1+delta_x/2), parseInt(y1+delta_y/2), y2, weight * (1 - grid_value_decay), false, step+1)
+        GenerateGridSquare(parseInt(x1+delta_x/2), x2, y1, parseInt(y1+delta_y/2), weight * (1 - grid_value_decay), false, step+1)
+        GenerateGridSquare(parseInt(x1+delta_x/2), x2, parseInt(y1+delta_y/2), y2, weight * (1 - grid_value_decay), false, step+1)
+    }
 }
 
 function ShowTiles() {
@@ -296,13 +367,23 @@ function KeepInBounds(num, max) {
 
     return Math.min(Math.max(num, 0), max)
 }
+
+function Until(condition_function) {
+
+    const poll = resolve => {
+      if(condition_function()) resolve();
+      else setTimeout(_ => poll(resolve), 20);
+    }
+  
+    return new Promise(poll);
+  }
 ////////////////////////////////////////
 //RUNTIME
 async function Start() {
     
     LoadTable()
     await FillTiles()
-    await GenerateDecorations()
+    //await GenerateDecorations()
 }
 
 Start()
