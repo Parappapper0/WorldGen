@@ -4,7 +4,7 @@ const body = document.getElementsByTagName("body")[0]
 const table = document.createElement("table")
 const size_x = 150
 const size_y = 150
-const square_length = 15
+const square_length = 5
 const generation_smoothening = 20
 const generation_type_smoothening = 10
 const smoothening_weight = 0.15
@@ -13,12 +13,17 @@ const type_smoothening_treshold_decay = 0.03
 const type_smoothening_fail_chance = 0.2
 const decoration_iterations = 5
 const generation_type = "grid"
-const grid_steps = 10
-const grid_value_decay = 0.25
+const grid_steps = 7
+const grid_value_decay = 0.3
+
 let tiles = []
 let entities = []
 let decorations = []
 
+let expected_calls = 1
+let calls = 0
+let done = false
+let can_go = false
 ////////////////////////////////////////
 //LOADING FUNCTIONS
 function LoadTable() {
@@ -55,8 +60,8 @@ async function SmoothenTiles() {
                 let count = 0;
                 let sum = 0;
 
-                for (let offset_y = -1; offset_y <= 1; offset_y++) {
-                    for (let offset_x = -1; offset_x <= 1; offset_x++) {
+                for (let offset_y = -2; offset_y <= 2; offset_y++) {
+                    for (let offset_x = -2; offset_x <= 2; offset_x++) {
                         let neighbour_y = y + offset_y;
                         let neighbour_x = x + offset_x;
 
@@ -194,67 +199,63 @@ async function FillTiles() {
             break;
 
         case "grid":
-            await GenerateGridSquare(0, size_x, 0, size_y, 1/(1 - grid_value_decay), true, 0)
+            GenerateGridSquare(0, size_x, 0, size_y, 1, 0)
+            await Until(() => done)
             break;
     }
-    //await SmoothenTiles()
+    await SmoothenTiles()
 }
 
-let hidden_expected_calls = 1
-let expected_calls = 1
-let calls = 0
-
-async function IDKYET() {
-//spostare variabili quando fatto
-//mettere qui chiamata a sottostanti quando tutte hanno fatto
-//cambiare nome
-
-    await Until(() => hidden_expected_calls == expected_calls)
-
+async function ShowGridFrame(step) {
     calls++
 
     if (calls != expected_calls) return;
 
-    hidden_expected_calls *= 4
-
-    await new Promise(r => setTimeout(r, 50));
-
+    console.log("Generating Grid...(" + (step+1) + "/" + grid_steps + ")")
     calls = 0
     expected_calls *= 4
+    can_go = true
+
+    if (expected_calls >= Math.pow(4, grid_steps)) done = true
 
     AssignTypeToTiles()
     ShowTiles()
 
-    await new Promise(r => setTimeout(r, 75));
+    await new Promise(r => setTimeout(r, 125/step+1));
+    can_go = false
 }
 
-async function GenerateGridSquare(x1, x2, y1, y2, weight, first, step) {
+async function GenerateGridSquare(x1, x2, y1, y2, weight, step) {
 
-    if (!first) {
+    if (step != 0) {
 
         let height = Math.random()
+        let weight_plus_one = 1 + weight
 
         for (let y = y1; y < y2; y++) {
             for (let x = x1; x < x2; x++) {
 
-                tiles[y * size_x + x].height += height * weight
-                tiles[y * size_x + x].height /= 1 + weight
+                let index = y * size_x + x //performance cause half calculations
+                tiles[index].height += height * weight
+                tiles[index].height /= weight_plus_one
 
             }
         }
     }
 
-    IDKYET()
-    await Until(() => calls == expected_calls)
+    ShowGridFrame(step)
+    await Until(() => can_go)
 
-    if (step <= grid_steps) {
+    if (step+1 < grid_steps) {
+
+        await Until(() => !can_go)
 
         delta_x = x2 - x1
         delta_y = y2 - y1
-        GenerateGridSquare(x1, parseInt(x1+delta_x/2), y1, parseInt(y1+delta_y/2), weight * (1 - grid_value_decay), false, step+1)
-        GenerateGridSquare(x1, parseInt(x1+delta_x/2), parseInt(y1+delta_y/2), y2, weight * (1 - grid_value_decay), false, step+1)
-        GenerateGridSquare(parseInt(x1+delta_x/2), x2, y1, parseInt(y1+delta_y/2), weight * (1 - grid_value_decay), false, step+1)
-        GenerateGridSquare(parseInt(x1+delta_x/2), x2, parseInt(y1+delta_y/2), y2, weight * (1 - grid_value_decay), false, step+1)
+        GenerateGridSquare(x1, parseInt(x1+delta_x/2), y1, parseInt(y1+delta_y/2), weight * (1 - grid_value_decay), step+1)
+        GenerateGridSquare(x1, parseInt(x1+delta_x/2), parseInt(y1+delta_y/2), y2, weight * (1 - grid_value_decay), step+1)
+        GenerateGridSquare(parseInt(x1+delta_x/2), x2, y1, parseInt(y1+delta_y/2), weight * (1 - grid_value_decay), step+1)
+        GenerateGridSquare(parseInt(x1+delta_x/2), x2, parseInt(y1+delta_y/2), y2, weight * (1 - grid_value_decay), step+1)
     }
 }
 
@@ -376,7 +377,7 @@ function Until(condition_function) {
     }
   
     return new Promise(poll);
-  }
+}
 ////////////////////////////////////////
 //RUNTIME
 async function Start() {
