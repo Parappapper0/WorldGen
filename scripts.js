@@ -9,8 +9,8 @@ let size = 150
 let generation_smoothening = 20
 let generation_type_smoothening = 10
 let smoothening_weight = 0.15
-let type_smoothening_treshold = 0.8
-let type_smoothening_treshold_decay = 0.03
+let type_smoothening_threshold = 0.8
+let type_smoothening_threshold_decay = 0.03
 let type_smoothening_fail_chance = 0.2
 let decoration_iterations = 5
 let generation_type = "grid"
@@ -31,6 +31,8 @@ let square_length = 0
 function LoadTable() {
 
     console.log("Loading Table...")
+
+    table.innerHTML = ""
 
     table.cellSpacing = 0
     for (let y = 0; y < size; y++) {
@@ -96,7 +98,7 @@ async function SmoothenTiles() {
 
 async function SmoothenTilesByType() {
 
-    let smoothening_treshold = type_smoothening_treshold
+    let smoothening_threshold = type_smoothening_threshold
 
     for (let i = 0; i < generation_type_smoothening; i++) {
 
@@ -135,7 +137,7 @@ async function SmoothenTilesByType() {
                     }
                 }
 
-                if (max_value / count > smoothening_treshold) {
+                if (max_value / count > smoothening_threshold) {
 
                     if (!Chance(type_smoothening_fail_chance))
                         tiles[y * size + x].type = max_key
@@ -144,7 +146,7 @@ async function SmoothenTilesByType() {
             }
         }
 
-        smoothening_treshold *= 1 - type_smoothening_treshold_decay
+        smoothening_threshold *= 1 - type_smoothening_threshold_decay
 
         ShowTiles()
         await new Promise(r => setTimeout(r, 125));
@@ -171,6 +173,8 @@ function AssignTypeToTiles() {
 async function FillTiles() {
 
     console.log("Generating Random Tiles...")
+
+    tiles = []
 
     for (let y = 0; y < size; y++)
         for (let x = 0; x < size; x++)
@@ -201,6 +205,10 @@ async function FillTiles() {
             break;
 
         case "grid":
+            calls = 0
+            expected_calls = 1
+            done = false
+            can_go = false
             GenerateGridSquare(0, size, 0, size, 1, 0)
             await Until(() => done)
             break;
@@ -361,17 +369,18 @@ function LoadSettingsTable() {
     let setting_function = (name, tr, input_type, base_value) => {
 
         let td = document.createElement("td")
-        td.innerHTML = "<label>" + name + "</label><br><input type='" + input_type + "' value='" + base_value + "'>"
+        td.className = "settingcell"
+        td.innerHTML = "<label for='" + name.toLowerCase().replaceAll(" ", "_").replaceAll("%", "") +"'>" + name + "</label><br><input type='" + input_type + "' id='" + name.toLowerCase().replaceAll(" ", "_").replaceAll("%", "") + "' value='" + base_value + "'>"
         tr.appendChild(td)
     }
 
     let tr = document.createElement("tr")
-    setting_function("Size", tr, "Number", size)
+    setting_function("Size", tr, "number", size)
     setting_function("Smoothening Iterations", tr, "number", generation_smoothening)
     setting_function("Type Smoothening Iterations", tr, "number", generation_type_smoothening)
     setting_function("Smoothening Weight%", tr, "number", smoothening_weight)
-    setting_function("Type Smoothening Threshold%", tr, "number", type_smoothening_treshold)
-    setting_function("Type Smoothening Decay%", tr, "number", type_smoothening_treshold_decay)
+    setting_function("Type Smoothening Threshold%", tr, "number", type_smoothening_threshold)
+    setting_function("Type Smoothening Decay%", tr, "number", type_smoothening_threshold_decay)
     settings_table.appendChild(tr)
 
     tr = document.createElement("tr")
@@ -387,14 +396,51 @@ function LoadSettingsTable() {
     let button = document.createElement("button")
     button.innerHTML = "Start Simulation"
     button.id = "button_start"
+    button.onclick = Start
     tr = document.createElement("tr")
     let td = document.createElement("td")
+    tr.appendChild(document.createElement("td")); tr.appendChild(document.createElement("td")); 
+    td.colSpan = 2
     td.appendChild(button)
     tr.appendChild(td)
+    tr.appendChild(document.createElement("td")); tr.appendChild(document.createElement("td")); 
     settings_table.appendChild(tr)
 }
 
 function GetSettings() {
+
+    if (document.getElementById("size").value < 50) return false
+    else size = document.getElementById("size").value
+
+    if (document.getElementById("smoothening_iterations").value < 0) return false
+    else generation_smoothening = document.getElementById("smoothening_iterations").value
+
+    if (document.getElementById("type_smoothening_iterations").value < 0) return false
+    else generation_type_smoothening = document.getElementById("type_smoothening_iterations").value
+
+    if (document.getElementById("smoothening_weight").value < 0 || document.getElementById("smoothening_weight").value > 1) return false
+    else smoothening_weight = parseFloat(document.getElementById("smoothening_weight").value)
+
+    if (document.getElementById("type_smoothening_threshold").value < 0 || document.getElementById("type_smoothening_threshold").value > 1) return false
+    else type_smoothening_threshold = parseFloat(document.getElementById("type_smoothening_threshold").value)
+
+    if (document.getElementById("type_smoothening_decay").value < 0 || document.getElementById("type_smoothening_decay").value > 1) return false
+    else type_smoothening_threshold_decay = parseFloat(document.getElementById("type_smoothening_decay").value)
+
+    if (document.getElementById("type_smoothening_fail").value < 0 || document.getElementById("type_smoothening_fail").value > 1) return false
+    else type_smoothening_fail_chance = parseFloat(document.getElementById("type_smoothening_fail").value)
+
+    if (document.getElementById("generation_type").value != "lines" && document.getElementById("generation_type").value != "grid") return false
+    else generation_type = document.getElementById("generation_type").value
+
+    if (document.getElementById("grid_steps").value < 1) return false
+    else grid_steps = document.getElementById("grid_steps").value
+
+    if (document.getElementById("grid_decay").value < -1 || document.getElementById("grid_decay").value > 1) return false
+    else grid_value_decay = parseFloat(document.getElementById("grid_decay").value)
+
+    if (document.getElementById("decoration_iterations").value < 0) return false
+    else decoration_iterations = document.getElementById("decoration_iterations").value
 
     return true
 }
