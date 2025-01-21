@@ -1,21 +1,22 @@
 ////////////////////////////////////////
 //VARIABLES
-const body = document.getElementsByTagName("body")[0]
-const table = document.createElement("table")
-const size_x = 150
-const size_y = 150
-const square_length = 5
-const generation_smoothening = 20
-const generation_type_smoothening = 10
-const smoothening_weight = 0.15
-const type_smoothening_treshold = 0.8
-const type_smoothening_treshold_decay = 0.03
-const type_smoothening_fail_chance = 0.2
-const decoration_iterations = 5
-const generation_type = "grid"
-const grid_steps = 7
-const grid_value_decay = 0.3
-
+////CONSTANTS
+const body = document.getElementById("main")
+const table = document.getElementById("world_table")
+const settings_table = document.getElementById("settings_table")
+////SETTINGS
+let size = 150
+let generation_smoothening = 20
+let generation_type_smoothening = 10
+let smoothening_weight = 0.15
+let type_smoothening_treshold = 0.8
+let type_smoothening_treshold_decay = 0.03
+let type_smoothening_fail_chance = 0.2
+let decoration_iterations = 5
+let generation_type = "grid"
+let grid_steps = 7
+let grid_value_decay = 0.3
+////OTHER VARIABLES
 let tiles = []
 let entities = []
 let decorations = []
@@ -24,6 +25,7 @@ let expected_calls = 1
 let calls = 0
 let done = false
 let can_go = false
+let square_length = 0
 ////////////////////////////////////////
 //LOADING FUNCTIONS
 function LoadTable() {
@@ -31,10 +33,10 @@ function LoadTable() {
     console.log("Loading Table...")
 
     table.cellSpacing = 0
-    for (let y = 0; y < size_y; y++) {
+    for (let y = 0; y < size; y++) {
 
         let tr = document.createElement("tr")
-        for (let x = 0; x < size_x; x++) {
+        for (let x = 0; x < size; x++) {
 
             let td = document.createElement("td")
             td.style.width = square_length + "px"
@@ -55,8 +57,8 @@ async function SmoothenTiles() {
         console.log("Smoothening Tiles... (" + (i+1) + "/" + generation_smoothening + ")")
         let map_of_average = [];
 
-        for (let y = 0; y < size_y; y++) {
-            for (let x = 0; x < size_x; x++) {
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
                 let count = 0;
                 let sum = 0;
 
@@ -65,8 +67,8 @@ async function SmoothenTiles() {
                         let neighbour_y = y + offset_y;
                         let neighbour_x = x + offset_x;
 
-                        if (neighbour_y >= 0 && neighbour_y < size_y && neighbour_x >= 0 && neighbour_x < size_x) {
-                            sum += tiles[neighbour_y * size_x + neighbour_x].height;
+                        if (neighbour_y >= 0 && neighbour_y < size && neighbour_x >= 0 && neighbour_x < size) {
+                            sum += tiles[neighbour_y * size + neighbour_x].height;
                             count++;
                         }
                     }
@@ -76,10 +78,10 @@ async function SmoothenTiles() {
             }
         }
 
-        for (let y = 0; y < size_y; y++) {
-            for (let x = 0; x < size_x; x++) {
-                tiles[y * size_x + x].height += map_of_average[y * size_x + x] * smoothening_weight
-                tiles[y * size_x + x].height /= 1 + smoothening_weight
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                tiles[y * size + x].height += map_of_average[y * size + x] * smoothening_weight
+                tiles[y * size + x].height /= 1 + smoothening_weight
             }
         }
 
@@ -100,8 +102,8 @@ async function SmoothenTilesByType() {
 
         console.log("Smoothening Tiles by Type... (" + (i+1) + "/" + generation_type_smoothening + ")")
 
-        for (let y = 0; y < size_y; y++) {
-            for (let x = 0; x < size_x; x++) {
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
                 let count = 0;
                 let counts = new Map
 
@@ -110,10 +112,10 @@ async function SmoothenTilesByType() {
                         let neighbour_y = y + offset_y;
                         let neighbour_x = x + offset_x;
 
-                        if (neighbour_y >= 0 && neighbour_y < size_y && neighbour_x >= 0 && neighbour_x < size_x) {
+                        if (neighbour_y >= 0 && neighbour_y < size && neighbour_x >= 0 && neighbour_x < size) {
                             
-                            let neighbour_type = tiles[neighbour_y * size_x + neighbour_x].type
-                            if (neighbour_type != tiles[y * size_x + x].type) {
+                            let neighbour_type = tiles[neighbour_y * size + neighbour_x].type
+                            if (neighbour_type != tiles[y * size + x].type) {
                                 if (counts.get(neighbour_type) == undefined)
                                     counts.set(neighbour_type, 1)
                                 else
@@ -136,7 +138,7 @@ async function SmoothenTilesByType() {
                 if (max_value / count > smoothening_treshold) {
 
                     if (!Chance(type_smoothening_fail_chance))
-                        tiles[y * size_x + x].type = max_key
+                        tiles[y * size + x].type = max_key
                 }
 
             }
@@ -151,17 +153,17 @@ async function SmoothenTilesByType() {
 
 function AssignTypeToTiles() {
 
-    for (let y = 0; y < size_y; y++) {
-        for (let x = 0; x < size_x; x++) {
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
 
             let type
-            if (tiles[y * size_x + x].height < 0.30) type = "deep_water"
-            else if (tiles[y * size_x + x].height < 0.40) type = "water"
-            else if (tiles[y * size_x + x].height < 0.58) type = "dirt"
-            else if (tiles[y * size_x + x].height < 0.62) type = "hills"
-            else if (tiles[y * size_x + x].height < 0.70) type = "mountains"
+            if (tiles[y * size + x].height < 0.30) type = "deep_water"
+            else if (tiles[y * size + x].height < 0.40) type = "water"
+            else if (tiles[y * size + x].height < 0.58) type = "dirt"
+            else if (tiles[y * size + x].height < 0.62) type = "hills"
+            else if (tiles[y * size + x].height < 0.70) type = "mountains"
             else type = "cliffs"
-            tiles[y * size_x + x].type = type
+            tiles[y * size + x].type = type
         }
     }
 }
@@ -170,8 +172,8 @@ async function FillTiles() {
 
     console.log("Generating Random Tiles...")
 
-    for (let y = 0; y < size_y; y++)
-        for (let x = 0; x < size_x; x++)
+    for (let y = 0; y < size; y++)
+        for (let x = 0; x < size; x++)
             tiles.push({
                 "type": "",
                 "height": 0.5
@@ -181,8 +183,8 @@ async function FillTiles() {
         case "lines":
         default:
             let past_height = 0.5
-            for (let y = 0; y < size_y; y++) {
-                for (let x = 0; x < size_x; x++) {
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
           
                     let height = Math.random()
         
@@ -190,7 +192,7 @@ async function FillTiles() {
                         height = Math.random()
         
                     past_height = height
-                    tiles[y * size_x + x].height = height
+                    tiles[y * size + x].height = height
                 }
                 past_height = 0.5
             }
@@ -199,7 +201,7 @@ async function FillTiles() {
             break;
 
         case "grid":
-            GenerateGridSquare(0, size_x, 0, size_y, 1, 0)
+            GenerateGridSquare(0, size, 0, size, 1, 0)
             await Until(() => done)
             break;
     }
@@ -221,7 +223,7 @@ async function ShowGridFrame(step) {
     AssignTypeToTiles()
     ShowTiles()
 
-    await new Promise(r => setTimeout(r, 125/step+1));
+    await new Promise(r => setTimeout(r, 125));
     can_go = false
 }
 
@@ -235,7 +237,7 @@ async function GenerateGridSquare(x1, x2, y1, y2, weight, step) {
         for (let y = y1; y < y2; y++) {
             for (let x = x1; x < x2; x++) {
 
-                let index = y * size_x + x //performance cause half calculations
+                let index = y * size + x //performance cause half calculations
                 tiles[index].height += height * weight
                 tiles[index].height /= weight_plus_one
 
@@ -261,10 +263,10 @@ async function GenerateGridSquare(x1, x2, y1, y2, weight, step) {
 
 function ShowTiles() {
 
-    for (let y = 0; y < size_y; y++) {
-        for (let x = 0; x < size_x; x++) {
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
   
-            switch (tiles[y * size_x + x].type) {
+            switch (tiles[y * size + x].type) {
                 case "deep_water": table.children.item(y).children.item(x).style.backgroundColor = "deepskyblue" 
                 break
                 case "water": table.children.item(y).children.item(x).style.backgroundColor = "skyblue" 
@@ -284,7 +286,7 @@ function ShowTiles() {
 
 async function GenerateDecorations() {
 
-    for (let i = 0; i < size_x * size_y; i++) {
+    for (let i = 0; i < size * size; i++) {
         decorations.push({
             "type": ""
         })
@@ -294,8 +296,8 @@ async function GenerateDecorations() {
 
         console.log("Generating Decorations... (" + (i+1) + "/" + decoration_iterations + ")")
 
-        for (let y = 0; y < size_y; y++) {
-            for (let x = 0; x < size_x; x++) {
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
 
                 GenerateDecoration(x, y, "")
             }
@@ -308,19 +310,19 @@ async function GenerateDecorations() {
 
 function GenerateDecoration(x, y, decoration_type) {
 
-    if (decorations[y * size_x + x].type != "")
-        decoration_type = decorations[y * size_x + x].type
+    if (decorations[y * size + x].type != "")
+        decoration_type = decorations[y * size + x].type
 
-    switch (tiles[y * size_x + x].type) {
+    switch (tiles[y * size + x].type) {
         case "water": //fish, algae
             switch (decoration_type) {
                 case "fish":
-                    decorations[y * size_x + x].type = "fish"
-                    if (Chance(0.02)) GenerateDecoration(KeepInBounds(x + RandomInteger(-1, 1), size_x-1), KeepInBounds(y + RandomInteger(-1, 1), size_y-1), "fish")
+                    decorations[y * size + x].type = "fish"
+                    if (Chance(0.02)) GenerateDecoration(KeepInBounds(x + RandomInteger(-1, 1), size-1), KeepInBounds(y + RandomInteger(-1, 1), size-1), "fish")
                     break
                 case "algae":
-                    decorations[y * size_x + x].type = "algae"
-                    if (Chance(0.1)) GenerateDecoration(KeepInBounds(x + RandomInteger(-1, 1), size_x-1), KeepInBounds(y + RandomInteger(-1, 1), size_y-1), "algae")
+                    decorations[y * size + x].type = "algae"
+                    if (Chance(0.1)) GenerateDecoration(KeepInBounds(x + RandomInteger(-1, 1), size-1), KeepInBounds(y + RandomInteger(-1, 1), size-1), "algae")
                     break
                 default:
                     if (Chance(0.005)) GenerateDecoration(x, y, "fish")
@@ -341,10 +343,10 @@ function ApplyDecorations() {
 
     console.log("Applying Decorations...")
 
-    for (let y = 0; y < size_y; y++) {
-        for (let x = 0; x < size_x; x++) {
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
   
-            switch (decorations[y * size_x + x].type) {
+            switch (decorations[y * size + x].type) {
                 case "fish": table.children.item(y).children.item(x).innerHTML = "f"
                 break
                 case "algae": table.children.item(y).children.item(x).innerHTML = "a"
@@ -354,6 +356,48 @@ function ApplyDecorations() {
     }
 }
 
+function LoadSettingsTable() {
+
+    let setting_function = (name, tr, input_type, base_value) => {
+
+        let td = document.createElement("td")
+        td.innerHTML = "<label>" + name + "</label><br><input type='" + input_type + "' value='" + base_value + "'>"
+        tr.appendChild(td)
+    }
+
+    let tr = document.createElement("tr")
+    setting_function("Size", tr, "Number", size)
+    setting_function("Smoothening Iterations", tr, "number", generation_smoothening)
+    setting_function("Type Smoothening Iterations", tr, "number", generation_type_smoothening)
+    setting_function("Smoothening Weight%", tr, "number", smoothening_weight)
+    setting_function("Type Smoothening Threshold%", tr, "number", type_smoothening_treshold)
+    setting_function("Type Smoothening Decay%", tr, "number", type_smoothening_treshold_decay)
+    settings_table.appendChild(tr)
+
+    tr = document.createElement("tr")
+    setting_function("Type Smoothening Fail%", tr, "number", type_smoothening_fail_chance)
+    setting_function("Generation Type", tr, "text", generation_type)
+    setting_function("Grid Steps", tr, "number", grid_steps)
+    setting_function("Grid Decay%", tr, "number", grid_value_decay)
+    setting_function("Decoration Iterations", tr, "number", decoration_iterations)
+    settings_table.appendChild(tr)
+
+
+    
+    let button = document.createElement("button")
+    button.innerHTML = "Start Simulation"
+    button.id = "button_start"
+    tr = document.createElement("tr")
+    let td = document.createElement("td")
+    td.appendChild(button)
+    tr.appendChild(td)
+    settings_table.appendChild(tr)
+}
+
+function GetSettings() {
+
+    return true
+}
 ////////////////////////////////////////
 //HELPER FUNCTIONS
 function Chance(chance) {
@@ -382,9 +426,16 @@ function Until(condition_function) {
 //RUNTIME
 async function Start() {
     
+    if (!GetSettings()) return;
     LoadTable()
     await FillTiles()
     //await GenerateDecorations()
 }
 
-Start()
+function Update() {
+
+    square_length = table.style.width / size
+}
+
+LoadSettingsTable()
+let update_interval = setInterval(Update, 100);
