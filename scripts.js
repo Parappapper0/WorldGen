@@ -45,6 +45,7 @@ function LoadTable() {
             td.style.maxWidth = square_length + "px"
             td.style.height = square_length + "px"
             td.style.maxHeight = square_length + "px"
+            td.className = "tile"
             tr.appendChild(td)       
         }    
         table.appendChild(tr)
@@ -324,17 +325,12 @@ function GenerateDecoration(x, y, decoration_type) {
     switch (tiles[y * size + x].type) {
         case "water": //fish, algae
             switch (decoration_type) {
-                case "fish":
-                    decorations[y * size + x].type = "fish"
-                    if (Chance(0.02)) GenerateDecoration(KeepInBounds(x + RandomInteger(-1, 1), size-1), KeepInBounds(y + RandomInteger(-1, 1), size-1), "fish")
-                    break
                 case "algae":
                     decorations[y * size + x].type = "algae"
                     if (Chance(0.1)) GenerateDecoration(KeepInBounds(x + RandomInteger(-1, 1), size-1), KeepInBounds(y + RandomInteger(-1, 1), size-1), "algae")
                     break
                 default:
-                    if (Chance(0.005)) GenerateDecoration(x, y, "fish")
-                    else if (Chance(0.005)) GenerateDecoration(x, y, "algae")
+                    if (Chance(0.005)) GenerateDecoration(x, y, "algae")
                     break
             }
             break
@@ -355,9 +351,7 @@ function ApplyDecorations() {
         for (let x = 0; x < size; x++) {
   
             switch (decorations[y * size + x].type) {
-                case "fish": table.children.item(y).children.item(x).innerHTML = "f"
-                break
-                case "algae": table.children.item(y).children.item(x).innerHTML = "a"
+                case "algae": table.children.item(y).children.item(x).innerHTML = "<image src='img/algae.png' style='max-width: " + square_length + "px; max-height: " + square_length + "px;'>"
                 break
             }
         }
@@ -475,12 +469,18 @@ async function Start() {
     if (!GetSettings()) return;
     LoadTable()
     await FillTiles()
-    //await GenerateDecorations()
+    await GenerateDecorations()
 }
 
 function Update() {
 
-    square_length = table.style.width / size
+    square_length = table.offsetWidth / size
+    let decorations_imgs = document.getElementsByTagName("img")
+    Array.from(decorations_imgs).forEach(element => {
+        element.maxWidth = square_length;
+        element.maxHeight = square_length;
+    });
+    table.maxHeight = table.width
 }
 
 LoadSettingsTable()

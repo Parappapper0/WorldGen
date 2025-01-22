@@ -6,6 +6,7 @@
     width: 38%;
     aspect-ratio: 1;
     background-color: #cdcdcd;
+    table-layout: fixed;
 }
 
 #settings_table {
@@ -22,9 +23,11 @@ body {
     background-color: #101010;
 }
 
-td {
+.tile {
     margin: 0;
     padding: 0;
+    object-fit: contain;
+    
 }
 
 .settingcell {
